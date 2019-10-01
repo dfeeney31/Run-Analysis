@@ -1,7 +1,7 @@
 %% Analysis of the treadmill data
 clear
 addpath('C:\Users\Daniel.Feeney\Documents\Trail Run\Run Code')
-data = importForcesTM('C:\Users\Daniel.Feeney\Dropbox (Boa)\Treadmill TMM\Data\WalkTest_15 - Report1.txt');
+data = importForcesTM('C:\Users\Daniel.Feeney\Dropbox (Boa)\Treadmill TMM\Data\WalkTest_24 - Report1.txt');
 
 %% Clean data for NaNs
 data.ForceZ(isnan(data.ForceZ))=0;
@@ -42,10 +42,15 @@ APforce = zeros(floor(length(pks)/2),301);
 MLforce = zeros(floor(length(pks)/2),301);
 for peak = 2:2:length(pks)
     tmp_location = locs(peak);
-    vertForce(floor(peak/2),:) = filt_forceZ(tmp_location - 150 : tmp_location +150);   
-    APforce(floor(peak/2),:) = filt_forceY(tmp_location - 150 : tmp_location +150); 
-    MLforce(floor(peak/2),:) = filt_forceX(tmp_location - 150 : tmp_location +150); 
+    try
+        vertForce(floor(peak/2),:) = filt_forceZ(tmp_location - 150 : tmp_location +150);   
+        APforce(floor(peak/2),:) = filt_forceY(tmp_location - 150 : tmp_location +150); 
+        MLforce(floor(peak/2),:) = filt_forceX(tmp_location - 150 : tmp_location +150); 
+    catch
+        fprintf('Reached end of matrix on iteration %s, skipped.\n',peak)
+    end
 end
+%MLforce = MLforce .* -1;
 
 figure(1)
 title('Z force')
@@ -56,6 +61,7 @@ shadedErrorBar(1:length(APforce), APforce, {@mean,@std}, 'lineprops','-r');
 figure(3)
 title('ML force')
 shadedErrorBar(1:length(MLforce), MLforce, {@mean,@std}, 'lineprops','-r');
+ylabel('Medial is negative')
 
 %% Other side
 vertForce2 = zeros(floor(length(pks)/2),301); % preallocate
@@ -77,7 +83,7 @@ vertForce2(size(vertForce2,1),:) = [];
 MLforce2(size(MLforce2,1),:) = [];
 APforce2(size(APforce2,1),:) = [];
 % Change ML forces to respective side
-MLforce2 = -1 .* MLforce2;
+%MLforce2 = -1 .* MLforce2;
 %% make plots
 figure(4)
 title('Z force')
@@ -89,3 +95,26 @@ figure(6)
 title('ML force')
 shadedErrorBar(1:length(MLforce2), MLforce2, {@mean,@std}, 'lineprops','-b');
 
+
+%% Calculate peaks for each epoch
+pk_vert = zeros(1,size(pks,2));
+pk_propulsion = zeros(1,size(pks,2));
+pk_break = zeros(1,size(pks,2));
+pk_medial = zeros(1,size(pks,2));
+for step = 2:2:length(pks)
+    tmp_location = locs(step);
+    try
+        pk_vert(floor(step/2)) = max(filt_forceZ(tmp_location - 150 : tmp_location +150));
+        pk_propulsion(floor(step/2)) = max(filt_forceY(tmp_location - 150 : tmp_location +150));
+        pk_break(floor(step/2)) = max(-1 .* filt_forceY(tmp_location - 150 : tmp_location +150));
+        pk_medial(floor(step/2)) = max(filt_forceX(tmp_location - 150 : tmp_location +150));
+        k_lateral(floor(step/2)) = max(-1 .* filt_forceX(tmp_location - 150 : tmp_location +150));
+    catch
+        fprintf('Reached end of matrix on iteration %s, skipped.\n',peak)
+    end
+end
+
+% figure(9)
+% plot(data.COPx(locs(2)-150:locs(2)+150), data.COPy(locs(2)-150:locs(2)+150))
+% figure(10)
+% plot(data.COPx(locs(3)-150:locs(3)+150), data.COPy(locs(3)-150:locs(3)+150))
