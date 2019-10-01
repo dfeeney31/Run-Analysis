@@ -1,7 +1,8 @@
 %% Analysis of the treadmill data
 clear
 addpath('C:\Users\Daniel.Feeney\Documents\Trail Run\Run Code')
-data = importForcesTM('C:\Users\Daniel.Feeney\Dropbox (Boa)\Treadmill TMM\Data\WalkTest_24 - Report1.txt');
+%data = importForcesTM('C:\Users\Daniel.Feeney\Dropbox (Boa)\Treadmill TMM\Data\WalkTest_30 - Report1.txt');
+data = importForcesTM('C:\Users\Daniel.Feeney\Dropbox (Boa)\Vongo\Russell_D - Report1.txt');
 
 %% Clean data for NaNs
 data.ForceZ(isnan(data.ForceZ))=0;
@@ -118,3 +119,5 @@ end
 % plot(data.COPx(locs(2)-150:locs(2)+150), data.COPy(locs(2)-150:locs(2)+150))
 % figure(10)
 % plot(data.COPx(locs(3)-150:locs(3)+150), data.COPy(locs(3)-150:locs(3)+150))
+
+%% Calculate impulse, loading rates, etc. 
