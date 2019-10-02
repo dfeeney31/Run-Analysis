@@ -2,7 +2,7 @@
 clear
 addpath('C:\Users\Daniel.Feeney\Documents\Trail Run\Run Code')
 %data = importForcesTM('C:\Users\Daniel.Feeney\Dropbox (Boa)\Treadmill TMM\Data\WalkTest_30 - Report1.txt');
-data = importForcesTM('C:\Users\Daniel.Feeney\Dropbox (Boa)\Vongo\Russell_D - Report1.txt');
+data = importForcesTM('C:\Users\Daniel.Feeney\Dropbox (Boa)\Vongo\JoshD - Report1.txt');
 
 %% Clean data for NaNs
 data.ForceZ(isnan(data.ForceZ))=0;
@@ -34,6 +34,8 @@ filt_forceZ(filt_forceZ<0) = 0; %detrend the Z signals so they start at 0
 % plot(filt_forceX)
 % title('X Force')
 
+
+
 %% Find peaks in force and concatenate
 [pks,locs] = findpeaks(filt_forceZ, 'minpeakdistance', 250, 'MinPeakProminence',100); %Find locations and values of peaks
 
@@ -41,17 +43,20 @@ filt_forceZ(filt_forceZ<0) = 0; %detrend the Z signals so they start at 0
 vertForce = zeros(floor(length(pks)/2),301); % preallocate
 APforce = zeros(floor(length(pks)/2),301);
 MLforce = zeros(floor(length(pks)/2),301);
+COP_x = zeros(floor(length(pks)/2),251);
+COP_y = zeros(floor(length(pks)/2),251);
 for peak = 2:2:length(pks)
     tmp_location = locs(peak);
     try
         vertForce(floor(peak/2),:) = filt_forceZ(tmp_location - 150 : tmp_location +150);   
         APforce(floor(peak/2),:) = filt_forceY(tmp_location - 150 : tmp_location +150); 
         MLforce(floor(peak/2),:) = filt_forceX(tmp_location - 150 : tmp_location +150); 
+        COP_x(floor(peak/2),:) = data.COPx(tmp_location - 125 : tmp_location +125); 
+        COP_y(floor(peak/2),:) = data.COPy(tmp_location - 125 : tmp_location +125); 
     catch
         fprintf('Reached end of matrix on iteration %s, skipped.\n',peak)
     end
 end
-%MLforce = MLforce .* -1;
 
 figure(1)
 title('Z force')
@@ -109,7 +114,7 @@ for step = 2:2:length(pks)
         pk_propulsion(floor(step/2)) = max(filt_forceY(tmp_location - 150 : tmp_location +150));
         pk_break(floor(step/2)) = max(-1 .* filt_forceY(tmp_location - 150 : tmp_location +150));
         pk_medial(floor(step/2)) = max(filt_forceX(tmp_location - 150 : tmp_location +150));
-        k_lateral(floor(step/2)) = max(-1 .* filt_forceX(tmp_location - 150 : tmp_location +150));
+        pk_lateral(floor(step/2)) = max(-1 .* filt_forceX(tmp_location - 150 : tmp_location +150));
     catch
         fprintf('Reached end of matrix on iteration %s, skipped.\n',peak)
     end

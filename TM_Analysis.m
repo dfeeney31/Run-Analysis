@@ -57,7 +57,7 @@ for file = files'
     for n = 1:(length(zeros_1) - 1)
         if (zeros_1(n + 1) - zeros_1(n) > 20) %if the difference between two zero locations is large enough, set that value to be a strike
             zero_loc(counter_var) = zeros_1(n + 1); %put this location into the zeros
-            counter_var = counter_var +1; %Update this index
+            counter_var = counter_var + 1; %Update this index
         end
     end
     
