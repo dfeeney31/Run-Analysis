@@ -52,7 +52,7 @@ hold on
 h(2) = shadedErrorBar(1:length(vertForce_B), vertForce_B, {@mean,@std}, 'lineprops','-b'); %Boa
 h(3) = shadedErrorBar(1:length(vertForce_C), vertForce_C, {@mean,@std}, 'lineprops','-g');
 h(4) = shadedErrorBar(1:length(vertForce_D), vertForce_D, {@mean,@std}, 'lineprops','-k'); %Boa
-legend([h(1).mainLine h(2).mainLine h(3).mainLine h(4).mainLine], 'Laced', 'Boa', 'Laced diff', 'Boa diff')
+legend([h(1).mainLine h(2).mainLine h(3).mainLine h(4).mainLine], 'A', 'B', 'C', 'D')
 xlabel('Time (ms)')
 ylabel('Vertical GRF (N)')
 
@@ -68,12 +68,12 @@ legend([h(1).mainLine h(2).mainLine h(3).mainLine h(4).mainLine], 'Laced', 'Boa'
 
 figure(3)
 title('ML force')
-h(1) = shadedErrorBar(1:length(MLforce), -1 .* MLforce, {@mean,@std}, 'lineprops','-r');
+h(1) = shadedErrorBar(1:length(MLforce), MLforce, {@mean,@std}, 'lineprops','-r');
 hold on
-h(2) = shadedErrorBar(1:length(MLforceB), -1 .* (MLforceB), {@mean,@std}, 'lineprops','-b'); %Boa
-h(3) = shadedErrorBar(1:length(MLforce_C), -1 .* MLforce_C, {@mean,@std}, 'lineprops','-g');
-h(4) = shadedErrorBar(1:length(MLforce_D),-1 .* MLforce_D, {@mean,@std}, 'lineprops','-k'); %Boa
-legend([h(1).mainLine h(2).mainLine h(3).mainLine h(4).mainLine], 'Laced', 'Boa', 'Laced diff', 'Boa diff')
+h(2) = shadedErrorBar(1:length(MLforce_B), -1 .* (MLforce_B), {@mean,@std}, 'lineprops','-g'); %Boa
+h(3) = shadedErrorBar(1:length(MLforce_C),-1 .*  MLforce_C, {@mean,@std}, 'lineprops','-b');
+h(4) = shadedErrorBar(1:length(MLforce_D),MLforce_D, {@mean,@std}, 'lineprops','k'); %Boa
+legend([h(1).mainLine h(2).mainLine h(3).mainLine h(4).mainLine], 'A', 'B', 'C', 'D')
 xlabel('Time (ms)')
 ylabel('Medial (+) / Lateral (-) GRF (N)')
 
