@@ -1,40 +1,25 @@
 %% Analysis of the treadmill data
 clear
+subBW = 74;
 addpath('C:\Users\Daniel.Feeney\Documents\Trail Run\Run Code')
 %data = importForcesTM('C:\Users\Daniel.Feeney\Dropbox (Boa)\Treadmill TMM\Data\WalkTest_30 - Report1.txt');
-data = importForcesTM('C:\Users\Daniel.Feeney\Dropbox (Boa)\Vongo\JoshD - Report1.txt');
-
+data = importForcesTM('C:\Users\Daniel.Feeney\Dropbox (Boa)\Trail Run Internal Pilot\HierroTesting_Nov2019\TM Data\DevinLevelDD - Report1.txt');
+%tmp_metadata = strsplit(convertCharsToStrings(file.name),' ');
 %% Clean data for NaNs
 data.ForceZ(isnan(data.ForceZ))=0;
 data.ForceY(isnan(data.ForceY))=0;
 data.ForceX(isnan(data.ForceX))=0;
+
 %% Filter data
 fq = 1000; %Sampling frequency
 fc = 20; %Cutoff frequency
 
 [b,a] = butter(2,fc/(fq/2),'low'); %second order BW filter, filtfilt doubles the order
 filt_forceZ = filtfilt(b,a,data.ForceZ);
-filt_forceY = -1 .* filtfilt(b,a,data.ForceY); %This will be used for the M/L and A/P forces
-filt_forceX = filtfilt(b,a,data.ForceX); %This will be used for the M/L and A/P forces
+filt_forceY = filtfilt(b,a,data.ForceY); %This will be used for the M/L and A/P forces
+filt_forceX = -1 .* filtfilt(b,a,data.ForceX); %This will be used for the M/L and A/P forces
 
 filt_forceZ(filt_forceZ<0) = 0; %detrend the Z signals so they start at 0
-
-%% 
-% Need to take every other foot step to demark left and right separately. 
-%% make plots
-% figure
-% plot(filt_forceZ)
-% title('Z Force')
-% 
-% figure
-% plot(filt_forceY)
-% title('Y Force')
-% 
-% figure
-% plot(filt_forceX)
-% title('X Force')
-
-
 
 %% Find peaks in force and concatenate
 [pks,locs] = findpeaks(filt_forceZ, 'minpeakdistance', 250, 'MinPeakProminence',100); %Find locations and values of peaks
@@ -69,6 +54,54 @@ title('ML force')
 shadedErrorBar(1:length(MLforce), MLforce, {@mean,@std}, 'lineprops','-r');
 ylabel('Medial is negative')
 
+
+%% calculate loading rates and peak force values
+
+for step = 1:size(vertForce,1)
+    tmp_step = vertForce(step,:);
+    count = 1;
+    for ind = 1:100
+        if (tmp_step(ind) == 0 & tmp_step(ind + 1) > 0)
+            trueZeros(step,count) = ind;
+            count = count + 1;
+        end
+    end
+end
+trueZeros = trueZeros(:,1);
+
+t_step = 50;
+rates = zeros(1,length(trueZeros));
+pks_vert = zeros(1,length(trueZeros)); pks_vert = pks_vert ./ subBW; pks_vert = pks_vert';
+pks_med = zeros(1,length(trueZeros)); pks_med = pks_med';
+
+%% heuristic is find the first impact peak, find 20 and 80% of it, use those indices to calculate the forces and RFD
+for i = 1:(length(trueZeros))
+    tmpIndex = trueZeros(i);
+    peakTmp = vertForce(i,trueZeros(i)+t_step);
+    twentyPct = find(vertForce(i,trueZeros(i):trueZeros(i)+100) > 0.2 * peakTmp ,1) + tmpIndex;
+    eightyPct = find(vertForce(i,trueZeros(i):trueZeros(i)+100) > 0.8 * peakTmp ,1) + tmpIndex;
+    rates(i) =  (vertForce(i,eightyPct) - vertForce(i,twentyPct)) / ((eightyPct - twentyPct)/1000);
+    pks_vert(i) = max(vertForce(i,:));
+    pks_med(i) = max(-1 .* MLforce(i,:));
+    pks_lat(i) = max(MLforce(i,:));
+    pks_brake(i) = max(-1 .* APforce(i,:));
+    pks_prop(i) = max(APforce(i,:));
+end
+rates = rates';
+rates = rates ./9.81; rates = rates ./ subBW;
+
+%A_output = [rates, pks_vert, pks_med ./ subBW, pks_lat' ./ subBW, pks_brake' ./ subBW, pks_prop' ./ subBW];
+A_output = [rates, pks_vert, pks_brake' ./ subBW, pks_prop' ./ subBW];
+
+%% histograms if needed
+% histogram(rates)
+% histogram(pks_vert)
+% histogram(pks_lat)
+% histogram(pks_med)
+% histogram(pks_brake)
+% histogram(pks_prop)
+
+
 %% Other side
 vertForce2 = zeros(floor(length(pks)/2),301); % preallocate
 APforce2 = zeros(floor(length(pks)/2),301);
@@ -99,30 +132,4 @@ title('AP force')
 shadedErrorBar(1:length(APforce2), APforce2, {@mean,@std}, 'lineprops','-b');
 figure(6)
 title('ML force')
-shadedErrorBar(1:length(MLforce2), MLforce2, {@mean,@std}, 'lineprops','-b');
-
-
-%% Calculate peaks for each epoch
-pk_vert = zeros(1,size(pks,2));
-pk_propulsion = zeros(1,size(pks,2));
-pk_break = zeros(1,size(pks,2));
-pk_medial = zeros(1,size(pks,2));
-for step = 2:2:length(pks)
-    tmp_location = locs(step);
-    try
-        pk_vert(floor(step/2)) = max(filt_forceZ(tmp_location - 150 : tmp_location +150));
-        pk_propulsion(floor(step/2)) = max(filt_forceY(tmp_location - 150 : tmp_location +150));
-        pk_break(floor(step/2)) = max(-1 .* filt_forceY(tmp_location - 150 : tmp_location +150));
-        pk_medial(floor(step/2)) = max(filt_forceX(tmp_location - 150 : tmp_location +150));
-        pk_lateral(floor(step/2)) = max(-1 .* filt_forceX(tmp_location - 150 : tmp_location +150));
-    catch
-        fprintf('Reached end of matrix on iteration %s, skipped.\n',peak)
-    end
-end
-
-% figure(9)
-% plot(data.COPx(locs(2)-150:locs(2)+150), data.COPy(locs(2)-150:locs(2)+150))
-% figure(10)
-% plot(data.COPx(locs(3)-150:locs(3)+150), data.COPy(locs(3)-150:locs(3)+150))
-
-%% Calculate impulse, loading rates, etc. 
+shadedErrorBar(1:length(MLforce2), -1 .* MLforce2, {@mean,@std}, 'lineprops','-b');
