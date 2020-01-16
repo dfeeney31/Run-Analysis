@@ -3,8 +3,9 @@ clear
 subBW =72;
 addpath('C:\Users\Daniel.Feeney\Documents\Trail Run\Run Code')
 %data = importForcesTM('C:\Users\Daniel.Feeney\Dropbox (Boa)\Treadmill TMM\Data\WalkTest_30 - Report1.txt');
-data = importForcesTM('C:\Users\Daniel.Feeney\Dropbox (Boa)\Endurance Protocol Trail Run\DaveLongProtocolTM\DaveSingle32min - Report1.txt');
+data = importForcesTM('C:\Users\Daniel.Feeney\Dropbox (Boa)\Endurance Protocol Trail Run\MelissaLong\TM\Melissa Lace 3.txt');
 %tmp_metadata = strsplit(convertCharsToStrings(file.name),' ');
+step_length = 401; %not used yet, but will allow to make window longer
 %% Clean data for NaNs
 data.ForceZ(isnan(data.ForceZ))=0;
 data.ForceY(isnan(data.ForceY))=0;
@@ -44,18 +45,6 @@ for peak = 2:2:length(pks)
     end
 end
 
-% figure(1)
-% title('Z force')
-% shadedErrorBar(1:length(vertForce), vertForce, {@mean,@std}, 'lineprops','-r');
-% figure(2)
-% title('AP force')
-% shadedErrorBar(1:length(APforce), APforce, {@mean,@std}, 'lineprops','-r');
-% figure(3)
-% title('ML force')
-% shadedErrorBar(1:length(MLforce), MLforce, {@mean,@std}, 'lineprops','-r');
-% ylabel('Medial is negative')
-
-
 %% calculate loading rates and peak force values
 
 for step = 1:size(vertForce,1)
@@ -69,6 +58,32 @@ for step = 1:size(vertForce,1)
     end
 end
 trueZeros = trueZeros(:,1);
+
+%%% Calculate end of steps
+truePushoff = zeros(1,length(trueZeros));
+for step2 = 1:size(vertForce,1)
+    tmp_step = vertForce(step2,60:end);
+    count = 1;
+    for ind = 1:300
+        try
+            if (tmp_step(ind) > 0 & tmp_step(ind + 1)== 0)
+                truePushoff(step2,count) = ind + 60;
+                count = count + 1;
+            else
+                truePushoff(step2,count) = 0;
+                count = count +1;
+            end
+        end
+    end
+end
+truePushoff = truePushoff(:,1);
+for ind = 1:length(truePushoff)
+   if truePushoff(ind) == 0
+       truePushoff(ind) = length(vertForce(ind,:));
+   end
+end
+
+%%
 
 t_step = 50;
 rates = zeros(1,length(trueZeros));
@@ -92,12 +107,15 @@ for i = 1:(length(trueZeros))
         pks_lat(i) = max(MLforce(i,:));
         pks_brake(i) = max(-1 .* APforce(i,:));
         pks_prop(i) = max(APforce(i,:));
+        impulse(i) = sum(APforce(i,trueZeros(i):truePushoff(i)))
     end
 end
 rates = rates';
 rates = rates ./9.81; rates = rates ./ subBW;
 
-%A_output = [rates, pks_vert, pks_med ./ subBW, pks_lat' ./ subBW, pks_brake' ./ subBW, pks_prop' ./ subBW];
+%A_output = [rates, pks_vert, pks_med ./ subBW, pks_lat' ./ subBW, pks_brake' ./ subBW, pks_prop' ./ subBW]
+
+% Results
 A_output = [rates, pks_vert, pks_brake' ./ subBW, pks_prop' ./ subBW];
 
 %% histograms if needed
@@ -130,17 +148,6 @@ MLforce2(size(MLforce2,1),:) = [];
 APforce2(size(APforce2,1),:) = [];
 % Change ML forces to respective side
 %MLforce2 = -1 .* MLforce2;
-%% make plots
-% figure(4)
-% title('Z force')
-% shadedErrorBar(1:length(vertForce2), vertForce2, {@mean,@std}, 'lineprops','-b');
-% figure(5)
-% title('AP force')
-% shadedErrorBar(1:length(APforce2), APforce2, {@mean,@std}, 'lineprops','-b');
-% figure(6)
-% title('ML force')
-% shadedErrorBar(1:length(MLforce2), -1 .* MLforce2, {@mean,@std}, 'lineprops','-b');
-
 
 %% Symmetry plots
 figure(4)
