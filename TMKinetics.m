@@ -3,17 +3,13 @@ clear
 subBW = 80;
 addpath('C:\Users\Daniel.Feeney\Documents\Trail Run\Run Code')
 kinData = importTMKinetics('C:\Users\Daniel.Feeney\Dropbox (Boa)\Hike Work Research\Data\TMHike\brett_up_SD - Kinetics.txt');
-%forceData = importForcesTM('C:\Users\Daniel.Feeney\Dropbox (Boa)\Hike Work Research\Data\TMHike\Dan_uphill_1min - Forces.txt');
-%tmp_metadata = strsplit(convertCharsToStrings(file.name),' ');
-%step_length = 401; %not used yet, but will allow to make window longer
-
-
+forceThresh = 50;
 
 %% Kinetics and zero'ing all kinetics when left foot is not on belt
 % first, remove low Z force values
 %filt_forceZ = filt_forceZ-35;
 filt_forceZ = kinData.LeftZForce * -1;
-filt_forceZ(filt_forceZ<30) = 0; %detrend the Z signals so they start at 0
+filt_forceZ(filt_forceZ<forceThresh) = 0; %detrend the Z signals so they start at 0
 
 % delimt when there is force on the left side
 leftStrike = zeros(length(filt_forceZ),1);
@@ -28,7 +24,56 @@ LAnkleMomX = leftStrike .* kinData.LAnkleMomentx; LAnkleMomY = leftStrike .* kin
 LKneeMomX = leftStrike .* kinData.LKneeMomentX; LKneeMomY = leftStrike .* kinData.LKneeMomentY; LKneeMomZ = leftStrike .* kinData.LKneeMomentZ;
 LHipMomX = leftStrike .* kinData.LHipMomentx; LHipMomY = leftStrike .* kinData.LHipMomenty; LHipMomZ = leftStrike .* kinData.LHipMomentz;
 
-% plots to visualize.
+%% delimit initial contact and toe off
+ic = zeros(60,1);
+count = 1;
+for step = 1:length(leftStrike)
+    if (filt_forceZ(step) == 0 & filt_forceZ(step + 1) > 30)
+        ic(count) = step;
+        count = count + 1;
+    end
+end
+
+to = zeros(60,1);
+count = 1;
+for step = 1:length(leftStrike)
+    if (filt_forceZ(step) > 30 & filt_forceZ(step + 1) == 0)
+        to(count) = step;
+        count = count + 1;
+    end
+end
+% trim first contact/toe off if not a full step
+if (ic(1) > to(1))
+   to(1) = []; 
+end
+ic(ic == 0) = []; to(to == 0) = [];
+
+if (ic(end) > to(end))
+   ic(end) = []; 
+end
+% Calculate step lengths
+stepLens = to - ic;
+
+%% extract features from each step length
+
+for step = 1:length(stepLens)
+    %powers
+    maxAnklePow(step) = max(LAnklePower(ic(step):to(step)));
+    maxKneePow(step) = max(LKneePower(ic(step):to(step)));
+    maxHipPow(step) = max(LHipPower(ic(step):to(step)));
+    %work
+    AnkleW(step) = sum(LAnklePower(ic(step):to(step)));
+    KneeW(step) = sum(LKneePower(ic(step):to(step)));
+    HipW(step) = sum(LHipPower(ic(step):to(step)));
+    %Moments
+    AnkleMx(step) = min(LAnkleMomX(ic(step):to(step))); AnkleMy(step) = max(LAnkleMomY(ic(step):to(step))); AnkleMz(step) = min(LAnkleMomZ(ic(step):to(step)));
+    KneeMx(step) = max(LKneeMomX(ic(step):to(step))); KneeMy(step) = max(LKneeMomY(ic(step):to(step))); KneeMz(step) = max(LKneeMomZ(ic(step):to(step)));
+    HipMx(step) = max(LHipMomX(ic(step):to(step))); HipMy(step) = max(LHipMomY(ic(step):to(step))); HipMz(step) = max(LHipMomZ(ic(step):to(step)));
+end
+
+output = [stepLens'; maxAnklePow; maxKneePow; maxHipPow; AnkleW; KneeW; HipW; AnkleMx; AnkleMy; AnkleMz; KneeMx; KneeMy; KneeMz; HipMx; HipMy; HipMz]';
+
+%% plots to visualize.
 figure
 plot(filt_forceZ)
 hold on
@@ -78,26 +123,7 @@ ylabel('Joint Moment (Nm)')
 legend('X','Y','Z','Force')
 xlim([200 600])
 
-%% WHICH SIDE IS WHICH
-%plot(forceData.COPx);
-forceData.ForceZ = forceData.ForceZ + 1260; %remove offset
-%% Clean data for NaNs
-forceData.ForceZ(isnan(forceData.ForceZ))=0;
-forceData.ForceY(isnan(forceData.ForceY))=0;
-forceData.ForceX(isnan(forceData.ForceX))=0;
 
-%% Filter data
-fq = 1000; %Sampling frequency
-fc = 20; %Cutoff frequency
-
-[b,a] = butter(2,fc/(fq/2),'low'); %second order BW filter, filtfilt doubles the order
-filt_forceZ = filtfilt(b,a,forceData.ForceZ);
-filt_forceY = filtfilt(b,a,forceData.ForceY); %This will be used for the M/L and A/P forces
-filt_forceX = filtfilt(b,a,forceData.ForceX); %This will be used for the M/L and A/P forces
-
-%filt_forceZ = filt_forceZ-35;
-filt_forceZ(filt_forceZ<10) = 0; %detrend the Z signals so they start at 0
-%plot(filt_forceZ)
 
 
 
